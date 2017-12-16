@@ -13,14 +13,16 @@ import time
 # Prepare the data, using the .flow_from_directory() method. 
 
 batch_size = 32
+path = '/nfs/turbo/intmed-bnallamo-turbo/wsliu/Data/dogs_cats/'
 
 # this is the augmentation configuration we will use for training
 train_datagen = ImageDataGenerator(
         rescale=1./255, 
-        width_shift_range=0.2, 
-        height_shift_range=0.2, 
+        width_shift_range=0.1, 
+        height_shift_range=0.1, 
         shear_range=0.1, 
-        zoom_range=0.2, 
+        zoom_range=0.1,
+        rotation_range=20,
         horizontal_flip=True, 
         fill_mode='nearest')
 
@@ -32,17 +34,17 @@ test_datagen = ImageDataGenerator(rescale=1./255)
 # subfolers of 'data/train', and indefinitely generate
 # batches of augmented image data
 train_generator = train_datagen.flow_from_directory(
-        '/scratch/bnallamo_armis/wsliu/dogs_cats/train',  # this is the target directory
-        target_size=(200, 200),  # all images will be resized to 150x150
+        path+'train',  # this is the target directory
+        target_size=(224, 224),  # all images will be resized to 150x150
         batch_size=batch_size,
-        class_mode='binary')  # since we use binary_crossentropy loss, we need binary labels
+        class_mode='categorical')  # since we use binary_crossentropy loss, we need binary labels
 
 # this is a similar generator, for validation data
 validation_generator = test_datagen.flow_from_directory(
-        '/scratch/bnallamo_armis/wsliu/dogs_cats/data/train',
-        target_size=(200, 200),
+        path+'data/train2000',
+        target_size=(224, 224),
         batch_size=batch_size,
-        class_mode='binary')
+        class_mode='categorical')
 
 
 # ## Model specification
@@ -52,29 +54,31 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras.layers import Activation, Dropout, Flatten, Dense
 
 model = Sequential()
-model.add(Conv2D(32, (3, 3), input_shape=(200, 200, 3)))
+model.add(Conv2D(32, (3, 3), input_shape=(224, 224, 3)))
 model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-
-model.add(Conv2D(32, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
 model.add(Conv2D(64, (3, 3)))
 model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
+model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
+model.add(Conv2D(128, (3, 3)))
+model.add(Activation('relu'))
+model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+
+model.add(Conv2D(256, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 # the model so far outputs 3D feature maps (height, width, features)
 
 model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
-model.add(Dense(64))
+model.add(Dense(512))
 model.add(Activation('relu'))
 model.add(Dropout(0.3))
-model.add(Dense(1))
-model.add(Activation('sigmoid'))
+model.add(Dense(2))
+model.add(Activation('softmax'))
 
-model.compile(loss='binary_crossentropy',
-              optimizer='rmsprop',
+model.compile(loss='categorical_crossentropy',
+              optimizer='adam',
               metrics=['accuracy'])
 
 # Model training:
@@ -83,22 +87,22 @@ start = time.time()
 print("==== Start model training ====")
 model.fit_generator(
         train_generator,
-        steps_per_epoch=23000 // batch_size,
-        epochs=30,
+        steps_per_epoch=train_generator.n // batch_size,
+        epochs=50,
         validation_data=validation_generator,
-        validation_steps=2000 // batch_size);
+        validation_steps=validation_generator.n // batch_size);
 run_time = time.time() - start
 print("==== End model training ====")
 f = open('run_times.txt', 'a')
 f.write("""
 ======== Begin of a new test ========
-In this test we use cpu: 1 node with 16 cores and 32 Gb mem. 
+In this test we use gpu: 1 node with 2 gpu and 16G mem. 
 We use a flow from directory to do data augmentation on the fly.  
-We use 23000 training samples, 2000 testing samples and 30 epochs. 
-Image size is set to 200*200. 
+We use 23000 training samples, 2000 testing samples and 50 epochs. 
+Image size is set to 224*224. 
 """)
 f.write("Time used for model training: %.2f\n" % run_time)
 f.close()
 
-model.save_weights('naive_cnn_full_sample.h5')  # always save your weights after training or during training
+model.save_weights(path+'model/covmax4_hidden1.h5')  # always save your weights after training or during training
 
