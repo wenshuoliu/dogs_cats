@@ -1,5 +1,5 @@
 
-# coding: utf-8
+#!usr/bin/python
 
 # # Dog vs. Cat Classifier
 # This notebook is supposed to experiment on different aspects of a image classifier: types of layers (fully connected, convolutional), training sample sizes, image generator, pretrained models, etc. 
@@ -54,26 +54,22 @@ from keras.layers import Conv2D, MaxPooling2D
 from keras.layers import Activation, Dropout, Flatten, Dense
 
 model = Sequential()
-model.add(Conv2D(32, (3, 3), input_shape=(224, 224, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+model.add(Conv2D(64, (3, 3), input_shape=(224, 224, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2), strides=(2,2)))
 
-model.add(Conv2D(64, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2), strides=(2,2)))
 
-model.add(Conv2D(128, (3, 3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D((2, 2), strides=(2, 2)))
+model.add(Conv2D(128, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2), strides=(2,2)))
 
 model.add(Conv2D(256, (3, 3), activation='relu'))
 model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 # the model so far outputs 3D feature maps (height, width, features)
 
 model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
-model.add(Dense(512))
-model.add(Activation('relu'))
-model.add(Dropout(0.3))
+model.add(Dense(256, activation='relu'))
+model.add(Dropout(0.2))
 model.add(Dense(2))
 model.add(Activation('softmax'))
 
@@ -90,13 +86,14 @@ model.fit_generator(
         steps_per_epoch=train_generator.n // batch_size,
         epochs=50,
         validation_data=validation_generator,
-        validation_steps=validation_generator.n // batch_size);
+        validation_steps=validation_generator.n // batch_size, 
+        verbose=2);
 run_time = time.time() - start
 print("==== End model training ====")
 f = open('run_times.txt', 'a')
 f.write("""
 ======== Begin of a new test ========
-In this test we use gpu: 1 node with 2 gpu and 16G mem. 
+In this test we use gpu: 1 node with 1 gpu and 8G mem. 
 We use a flow from directory to do data augmentation on the fly.  
 We use 23000 training samples, 2000 testing samples and 50 epochs. 
 Image size is set to 224*224. 
@@ -104,5 +101,5 @@ Image size is set to 224*224.
 f.write("Time used for model training: %.2f\n" % run_time)
 f.close()
 
-model.save_weights(path+'model/covmax4_hidden1.h5')  # always save your weights after training or during training
+model.save_weights(path+'models/covmax4_hidden1.h5')  # always save your weights after training or during training
 
