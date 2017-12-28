@@ -8,7 +8,9 @@
 from keras.preprocessing.image import ImageDataGenerator
 #from PIL import Image
 import time
+import os
 
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
 
 # Prepare the data, using the .flow_from_directory() method. 
 
@@ -34,7 +36,7 @@ test_datagen = ImageDataGenerator(rescale=1./255)
 # subfolers of 'data/train', and indefinitely generate
 # batches of augmented image data
 train_generator = train_datagen.flow_from_directory(
-        path+'train',  # this is the target directory
+        path+'wrong_label',  # this is the target directory
         target_size=(224, 224),  # all images will be resized to 150x150
         batch_size=batch_size,
         class_mode='categorical')  # since we use binary_crossentropy loss, we need binary labels
@@ -69,7 +71,7 @@ model.add(MaxPooling2D((2, 2), strides=(2, 2)))
 
 model.add(Flatten())  # this converts our 3D feature maps to 1D feature vectors
 model.add(Dense(256, activation='relu'))
-model.add(Dropout(0.2))
+model.add(Dropout(0.3))
 model.add(Dense(2))
 model.add(Activation('softmax'))
 
@@ -101,5 +103,5 @@ Image size is set to 224*224.
 f.write("Time used for model training: %.2f\n" % run_time)
 f.close()
 
-model.save_weights(path+'models/covmax4_hidden1.h5')  # always save your weights after training or during training
+model.save_weights(path+'models/covmax4_hidden1_wronglabel.h5')  # always save your weights after training or during training
 
